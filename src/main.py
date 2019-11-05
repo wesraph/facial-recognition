@@ -6,6 +6,7 @@ import matplotlib.image as mpimg
 import numpy as np
 import functools
 import search
+import pandas as pd
 
 # Path of the dataset 1
 # DATASET_DIR_1="../data/dataset1/images/"
@@ -15,9 +16,9 @@ DATASET_DIR_NEGATIVE="../data/dataset1/negative/"
 
 def loadImageToArray(path):
     jpg_list = [f for f in listdir(path) if isfile(join(path, f))]
-    # print(onlyfiles)
+
     if(len(jpg_list) == 0):
-        print("No file found at " + path)
+        print("No files found at " + path)
         sys.exit(1)
 
     print("Number of images: ", len(jpg_list))
@@ -69,27 +70,40 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
     print("Refused probes: ", refusedProbes / (lenPosProbes + lenNegProbes))
     print("Accepted probes: ", falseRefusedProbes / (lenPosProbes + lenNegProbes))
 
+def applyPCA(data):
+    print("Scaling data")
+    scaled = preprocessing.scale(data)
+    print("Transpose")
+    scaled = pd.DataFrame(scaled.T)
+    print("Covariance")
+    # TODO: check this
+    covMat = scaled.cov()
+    print("Eigenvalues")
+    eigenValues, eigenVectors = np.linalg.eig(covMat)
+    mainComps = covMat * eigenVectors
+
+    return mainComps
+
 print("Loading posProbes")
 posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
+redPosProbes = applyPCA(posProbes)
 
 print("Loading negProbes")
 negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
+redNegProbes = applyPCA(negProbes)
 
 print("Loading dataset")
 gallery = loadImageToArray(DATASET_DIR_1)
+redGallery = applyPCA(gallery)
 
+print("Saving PCA dataset")
+np.save("PCA_dataset.npy", redGallery)
 # bestR = findBestR(gallery, posProbes)
-bestR = 2027817.0
-print("Best R:", bestR)
+# bestR = 2027817.0
+# print("Best R:", bestR)
 
-evaluateRadius(gallery, posProbes, negProbes, bestR)
+# Evaluate radius
+# evaluateRadius(gallery, posProbes, negProbes, bestR)
+
 
 # print("Indice ", findMinR(gallery, negProbes))
-
-print("Querying pos")
-
-# indices, posProbesResult = search.radius_search(gallery, negProbes[0], r=bestR)
-
-print(posProbesResult)
-print(indices)
-print(len(indices))
