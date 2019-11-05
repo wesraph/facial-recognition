@@ -25,12 +25,10 @@ def compute_distances(data, query, norm="L2"):
 	:rtype: (n)-sized Numpy array of floats
 	"""
 
-	print("LENGTH",len(data))
 	norm_function = norms[norm]
 	distances = np.zeros((len(data),), dtype=np.float32)
 	for i, d in enumerate(data):
 		distances[i] = norm_function(d-query)
-		print(distances[i])
 	return distances
 
 def knn_search(data, query, k=1, norm='L2'):
