@@ -41,6 +41,14 @@ def findBestR(gallery, posProbes):
             r = dmax
     return r
 
+def transformDataset(data, eigenFaces):
+    data = preprocessing.normalize(data)
+    return np.array(
+            list(
+                map(lambda q: np.array(q).T.dot(eigenFaces), data
+            )))
+
+
 def evaluateRadius(gallery, posProbes, negProbes, r):
     lenPosProbes = len(posProbes)
     lenNegProbes = len(negProbes)
@@ -71,17 +79,11 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
     print("Accepted probes: ", falseRefusedProbes / (lenPosProbes + lenNegProbes))
 
 def applyPCA(data):
-    print("Data")
-    print(len(data))
-    print(len(data[0]))
-
     print("Compute average vector")
     averageVector = data[0]
     for i in range(1, len(data)):
         averageVector += data[i]
     averageVector = averageVector / len(averageVector)
-
-    print("Average vector is:", averageVector)
 
     print("Substracting average vector to all vectors")
     for i in range(0, len(data)):
@@ -101,7 +103,7 @@ def applyPCA(data):
     eigenFaces = np.array(data).T.dot(eigenVectors)
     eigenVectors = preprocessing.normalize(eigenVectors)
 
-    return eigenVectors, eigenFaces
+    return eigenVectors, eigenFaces, averageVector
 
 def saveDataset(path, data):
     return np.save(path, data)
@@ -124,13 +126,28 @@ def trainAndSave(path):
     data = loadImageToArray(path)
 
     print("Computing eigenFaces")
-    eigenVectors, eigenFaces = applyPCA(data)
+    eigenVectors, eigenFaces, averageVector = applyPCA(data)
 
     print("Saving")
-    # saveDataset("eigenFaces.npy", eigenFaces)
-    # saveDataset("eigenVectors.npy", eigenVectors)
+    saveDataset("eigenFaces.npy", eigenFaces)
+    saveDataset("eigenVectors.npy", eigenVectors)
+    saveDataset("averageVector.npy", averageVector)
+
+
+def transformQuery(q, eigenFaces):
+    return np.array(q).T.dot(eigenFaces)
+
+# trainAndSave(DATASET_DIR_1)
+
+# parser = argparse.ArgumentParser(description='Process some integers.')
+# parser.add_argument('integers', metavar='N', type=int, nargs='+',
+                    # help='an integer for the accumulator')
+# parser.add_argument('--sum', dest='accumulate', action='store_const',
+                    # const=sum, default=max,
+                    # help='sum the integers (default: find the max)')
 
 trainAndSave(DATASET_DIR_1)
+sys.exit(0)
 
 print("Loading eigenVectors")
 # eigenVectors = importDataset("./eigenVectors.npy")
@@ -139,11 +156,28 @@ eigenVectors = np.load("eigenVectors.npy")
 print("Loading eigenFaces")
 eigenFaces = np.load("eigenFaces.npy")
 
+print(len(eigenFaces))
+print(len(eigenFaces[0]))
+print(len(eigenVectors))
+print(len(eigenVectors[0]))
+
 print("Loading posProbes")
 posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
 print("Transforming posProbes")
-# transPosProbes = np.array(posProbes).T.dot(eigenVectors)
-transPosProbes = np.array(posProbes).T.dot(eigenVectors)
+posProbes = transformDataset(posProbes, eigenFaces)
+
+print("Loading negProbes")
+negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
+print("Transforming negProbes")
+negProbes = transformDataset(negProbes, eigenFaces)
+
+print("Computing bestR")
+# bestR = findBestR(eigenFaces, posProbes)
+bestR = 2826968800000.0
+print("bestR", bestR)
+
+print("Evaluating radius")
+evaluateRadius(eigenFaces, posProbes, negProbes, bestR)
 
 # print("Loading negProbes")
 # negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
