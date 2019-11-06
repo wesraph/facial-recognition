@@ -71,18 +71,100 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
     print("Accepted probes: ", falseRefusedProbes / (lenPosProbes + lenNegProbes))
 
 def applyPCA(data):
-    print("Scaling data")
     scaled = preprocessing.scale(data)
+    scaled = scaled.T
+    covMat = np.cov(scaled, rowvar=False)
+    eigenValuesTrans, eigenVectorsTrans = np.linalg.eig(covMat)
+    print(len(eigenVectorsTrans))
+    print(len(eigenVectorsTrans[0]))
+
+    eigenVectors = []
+    for i in range(0, len(eigenVectorsTrans)):
+        eigenVectors.append(scaled * eigenVectorsTrans[i])
+
+    normalizedEVe = preprocessing.normalize(eigenVectors)
+    # mainComps = data * normalizedEVe
+    # return list(mainComps), eigenVectors, eigenValues
+    eigenValues = eigenValuesTrans * ((len(data[0]) - 1) / (len(data) - 1))
+    # return mainComps, normalizedEVe, eigenValues
+    return normalizedEVe, eigenValues
+
+def applyPCA3(data):
+    print("Compute average vector")
+    averageVector = data[0]
+    for i in range(1, len(data)):
+        averageVector += data[i]
+    averageVector = averageVector / len(averageVector)
+
+    print("Average vector is:", averageVector)
+
+    print("Substracting average vector to all vectors")
+    for i in range(0, len(data)):
+        data[i] = data[i] - averageVector
+
+    print("Computing covMat")
+    covMat = np.cov(data, rowvar=False)
+
+    print("Computing eigen(vector|values)")
+    eigenValues, eigenVectors = np.linalg.eig(covMat)
+
+
+
+
+
+
+
+def applyPCA2(data):
+    print("Scaling data")
+    print(len(data))
+    print(len(data[0]))
+    # TODO: Check
+    scaled = preprocessing.scale(data).T
+    print(len(scaled))
+    print(len(scaled[0]))
     print("Transpose")
-    scaled = pd.DataFrame(scaled.T)
     print("Covariance")
     # TODO: check this
-    covMat = scaled.cov()
-    print("Eigenvalues")
-    eigenValues, eigenVectors = np.linalg.eig(covMat)
-    mainComps = covMat * eigenVectors
+    covMat = np.cov(scaled, rowvar=False)
+    print("Len covmat", len(covMat))
+    print("Len covmat0", len(covMat[0]))
 
-    return mainComps
+    print("Eigenvalues")
+    eigenValuesTrans, eigenVectorsTrans = np.linalg.eig(covMat)
+    print("lenEigenVectors", len(eigenVectorsTrans))
+    print("lenEigenVectors0", len(eigenVectorsTrans[0]))
+
+    eigenVectors = scaled * eigenVectorsTrans
+    normalizedEVe = preprocessing.normalize(eigenVectors)
+    print(eigenVectors)
+    print(normalizedEVe)
+
+    eigenValues = eigenValuesTrans * ((len(data[0]) - 1) / (len(data) - 1))
+
+    mainComps = data * normalizedEVe
+    print(mainComps)
+
+    # return list(mainComps), eigenVectors, eigenValues
+    return mainComps, normalizedEVe, eigenValues
+
+# def transformQuery(query, eigenVectors):
+    # return
+
+def saveDataset(path, data):
+    return np.save(path, data)
+
+def importDataset(path):
+    data = np.load(path).tolist()
+    for i in range(0, len(data)):
+        data[i] = np.array(data[i])
+
+    return data
+
+def toListNDArray(data):
+    dlist = data.tolist()
+    for i in range(0, len(dlist)):
+        data[i] = np.array(data[i])
+    return data
 
 print("Loading posProbes")
 posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
@@ -92,15 +174,34 @@ print("Loading negProbes")
 negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
 redNegProbes = applyPCA(negProbes)
 
-print("Loading dataset")
-gallery = loadImageToArray(DATASET_DIR_1)
-redGallery = applyPCA(gallery)
+print("Loading dataset gallery")
+gallery = loadImageToArray(DATASET_DIR_POSITIVE)
+redGallery, eigenVectors, eigenValues = applyPCA(gallery)
+print("Saving redGallery")
+saveDataset("redgallery.npy", redGallery)
+saveDataset("eigenVectors.npy", eigenVectors)
+saveDataset("eigenValues.npy", eigenValues)
+# redGallery = importDataset("PCA_dataset.npy")
 
-print("Saving PCA dataset")
-np.save("PCA_dataset.npy", redGallery)
-# bestR = findBestR(gallery, posProbes)
+print("object total: ", type(redGallery))
+print("object total: ", type(gallery))
+print("object total: ", type(redPosProbes))
+
+print("element 0", type(redGallery[0]))
+print("element 0", type(gallery[0]))
+print("element 0", type(redPosProbes[0]))
+
+print("dim", len(redGallery))
+print("dim", len(gallery))
+print("dim", len(redPosProbes))
+
+print("dim 0", len(redGallery[0]))
+print("dim 0", len(gallery[0]))
+print("dim 0", len(redPosProbes[0]))
+
+bestR = findBestR(redGallery, redPosProbes)
 # bestR = 2027817.0
-# print("Best R:", bestR)
+print("Best R:", bestR)
 
 # Evaluate radius
 # evaluateRadius(gallery, posProbes, negProbes, bestR)
