@@ -132,7 +132,7 @@ def trainModelAndSave(path):
     print("Reloading data")
     data = []
     data = loadImageToArray(path)
-    model["gallery"] = transformDataset(data, eigenFaces, averageVector)
+    model["gallery"] = transformDataset(data, model["eigenFaces"], model["averageVector"])
 
     print("Saving")
     np.save("model.npy", model)
