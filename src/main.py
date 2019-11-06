@@ -41,12 +41,13 @@ def findBestR(gallery, posProbes):
             r = dmax
     return r
 
-def transformDataset(data, eigenFaces):
-    data = preprocessing.normalize(data)
-    return np.array(
-            list(
-                map(lambda q: np.array(q).T.dot(eigenFaces), data
-            )))
+def transformDataset(data, eigenFaces, averageVector):
+    data = np.array(data)
+    return np.subtract(data, averageVector).dot(eigenFaces)
+    # return np.array(
+            # list(
+                # map(lambda q: np.array(q - averageVector).T.dot(eigenFaces), data
+            # )))
 
 
 def evaluateRadius(gallery, posProbes, negProbes, r):
@@ -80,6 +81,8 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
 
 def applyPCA(data):
     print("Compute average vector")
+    n, d = np.array(data).shape
+
     averageVector = data[0]
     for i in range(1, len(data)):
         averageVector += data[i]
@@ -88,7 +91,6 @@ def applyPCA(data):
     print("Substracting average vector to all vectors")
     for i in range(0, len(data)):
         data[i] = data[i] - averageVector
-    # From here, data is centered
 
     print("Computing covMat of DT")
     covMat = np.cov(np.array(data).T, rowvar=False)
@@ -101,12 +103,11 @@ def applyPCA(data):
     print(len(eigenValues))
 
     eigenFaces = np.array(data).T.dot(eigenVectors)
-    eigenVectors = preprocessing.normalize(eigenVectors)
+    eigenFaces = preprocessing.normalize(eigenFaces)
 
-    return eigenVectors, eigenFaces, averageVector
+    eigenValues = eigenValues * ((d - 1) / (n - 1))
 
-def saveDataset(path, data):
-    return np.save(path, data)
+    return eigenFaces, eigenValues, averageVector
 
 def importDataset(path):
     data = np.load(path).tolist()
@@ -121,63 +122,59 @@ def toListNDArray(data):
         data[i] = np.array(data[i])
     return data
 
-def trainAndSave(path):
+def trainModelAndSave(path):
     print("Loading dataset (images to array)")
     data = loadImageToArray(path)
 
-    print("Computing eigenFaces")
-    eigenVectors, eigenFaces, averageVector = applyPCA(data)
+    model = {}
+    model["eigenFaces"], model["eigenValues"], model["averageVector"] = applyPCA(data)
+
+    print("Reloading data")
+    data = []
+    data = loadImageToArray(path)
+    model["gallery"] = transformDataset(data, eigenFaces, averageVector)
 
     print("Saving")
-    saveDataset("eigenFaces.npy", eigenFaces)
-    saveDataset("eigenVectors.npy", eigenVectors)
-    saveDataset("averageVector.npy", averageVector)
+    np.save("model.npy", model)
+
+def loadModel(path):
+    model = np.load(path)
+    return model["eigenFaces"], model["eigenValues"], model["averageVector"]
+
+def transformGalleryAndSave(path, eigenFaces,):
+    print("Loading gallery")
+    gallery = loadImageToArray(path)
+    print("Transforming gallery")
+    gallery = transformDataset(gallery, eigenFaces, averageVector)
 
 
-def transformQuery(q, eigenFaces):
-    return np.array(q).T.dot(eigenFaces)
+trainModelAndSave(DATASET_DIR_1)
 
-# trainAndSave(DATASET_DIR_1)
-
-# parser = argparse.ArgumentParser(description='Process some integers.')
-# parser.add_argument('integers', metavar='N', type=int, nargs='+',
-                    # help='an integer for the accumulator')
-# parser.add_argument('--sum', dest='accumulate', action='store_const',
-                    # const=sum, default=max,
-                    # help='sum the integers (default: find the max)')
-
-trainAndSave(DATASET_DIR_1)
 sys.exit(0)
 
-print("Loading eigenVectors")
-# eigenVectors = importDataset("./eigenVectors.npy")
-eigenVectors = np.load("eigenVectors.npy")
+eigenFaces, eigenValues, averageVector = loadModel("model.npy")
 
-print("Loading eigenFaces")
-eigenFaces = np.load("eigenFaces.npy")
-
-print(len(eigenFaces))
-print(len(eigenFaces[0]))
-print(len(eigenVectors))
-print(len(eigenVectors[0]))
+print("Loading gallery")
+gallery = loadImageToArray(DATASET_DIR_1)
+print("Transforming gallery")
+gallery = transformDataset(gallery, eigenFaces, averageVector)
 
 print("Loading posProbes")
 posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
 print("Transforming posProbes")
-posProbes = transformDataset(posProbes, eigenFaces)
+posProbes = transformDataset(posProbes, eigenFaces, averageVector)
 
 print("Loading negProbes")
 negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
 print("Transforming negProbes")
-negProbes = transformDataset(negProbes, eigenFaces)
+negProbes = transformDataset(negProbes, eigenFaces, averageVector)
 
 print("Computing bestR")
-# bestR = findBestR(eigenFaces, posProbes)
-bestR = 2826968800000.0
-print("bestR", bestR)
+bestR = findBestR(gallery, posProbes)
+print(bestR)
 
 print("Evaluating radius")
-evaluateRadius(eigenFaces, posProbes, negProbes, bestR)
+evaluateRadius(gallery, posProbes, negProbes, bestR)
 
 # print("Loading negProbes")
 # negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
@@ -199,15 +196,6 @@ evaluateRadius(eigenFaces, posProbes, negProbes, bestR)
 # print("Loading negProbes")
 # negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
 # redNegProbes = applyPCA(negProbes)
-
-# print("Loading dataset gallery")
-# gallery = loadImageToArray(DATASET_DIR_POSITIVE)
-# redGallery, eigenVectors, eigenValues = applyPCA(gallery)
-# print("Saving redGallery")
-# saveDataset("redgallery.npy", redGallery)
-# saveDataset("eigenVectors.npy", eigenVectors)
-# saveDataset("eigenValues.npy", eigenValues)
-# redGallery = importDataset("PCA_dataset.npy")
 
 # bestR = findBestR(redGallery, redPosProbes)
 # bestR = 2027817.0
