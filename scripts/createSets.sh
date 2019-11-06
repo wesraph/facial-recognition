@@ -2,7 +2,7 @@
 set -e
 
 echo "Creating positive probes"
-mkdir -p dataset1/{positive,negative}
+mkdir -p data/dataset1/{positive,negative}
 
 mv data/dataset1/images/*.1.jpg data/dataset1/positive
 
