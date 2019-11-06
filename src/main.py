@@ -96,6 +96,7 @@ def applyPCA(data):
     print("Computing eigen(vector|values)")
     eigenValues, eigenVectors = np.linalg.eig(covMat)
     print(len(eigenVectors))
+    print(len(eigenValues))
 
     eigenFaces = np.array(data).T.dot(eigenVectors)
     eigenVectors = preprocessing.normalize(eigenVectors)
@@ -126,10 +127,35 @@ def trainAndSave(path):
     eigenVectors, eigenFaces = applyPCA(data)
 
     print("Saving")
-    saveDataset("eigenFaces.npy", eigenFaces)
-    saveDataset("eigenVectors.npy", eigenVectors)
+    # saveDataset("eigenFaces.npy", eigenFaces)
+    # saveDataset("eigenVectors.npy", eigenVectors)
 
 trainAndSave(DATASET_DIR_1)
+
+print("Loading eigenVectors")
+# eigenVectors = importDataset("./eigenVectors.npy")
+eigenVectors = np.load("eigenVectors.npy")
+
+print("Loading eigenFaces")
+eigenFaces = np.load("eigenFaces.npy")
+
+print("Loading posProbes")
+posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
+print("Transforming posProbes")
+# transPosProbes = np.array(posProbes).T.dot(eigenVectors)
+transPosProbes = np.array(posProbes).T.dot(eigenVectors)
+
+# print("Loading negProbes")
+# negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
+
+
+# print("Loading dataset gallery")
+# gallery = np.array(loadImageToArray(DATASET_DIR_1))
+
+# print("Reducing gallery")
+# print(type(gallery))
+# eigenFaces = gallery.T.dot(eigenVectors)
+
 # print("Loading posProbes")
 # posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
 # redPosProbes = applyPCA3(posProbes)
