@@ -1,9 +1,9 @@
 from os import listdir
 from os.path import isfile, join
 from sklearn import preprocessing
+import matplotlib.image as mpimg
 import numpy as np
 import search
-import pandas as pd
 import argparse
 import sys
 import pickle
@@ -29,14 +29,28 @@ def loadImageToArray(path):
 
     return img_array
 
-def findBestR(gallery, posProbes):
+def findBestR(gallery, random=False, limit=100):
     r = 0
-    lenPosProbes = len(posProbes)
-    for i in range(0, lenPosProbes):
-        distances = search.compute_distances(gallery, posProbes[i])
+    lenGallery = len(gallery)
+    iterator = []
+
+    if random:
+       iterator = [random.randint(0, lenGallery) for i in range(0, limit)]
+    else:
+        iterator = range(0, lenGallery)
+
+    print(iterator)
+    lenIterator = len(iterator)
+
+    for i in interator:
+        print((i / lenIterator * 100))
+        sliced = np.concatenate([gallery[:i],gallery[i+1:]])
+
+        distances = search.compute_distances(sliced, gallery[i])
         dmax = np.amin(distances)
         if dmax > r:
             r = dmax
+
     return r
 
 def transformDataset(data, eigenFaces, averageVector):
@@ -77,24 +91,15 @@ def applyPCA(data):
     data = np.array(data)
     n, d = data.shape
 
-    averageVector = data[0]
-    for i in range(1, len(data)):
-        averageVector += data[i]
-    averageVector = averageVector / len(averageVector)
-
-    print("Substracting average vector to all vectors")
-    for i in range(0, len(data)):
-        data[i] = data[i] - averageVector
+    print("Centering matrix")
+    averageVector = np.mean(data, axis=0)
+    data = np.subtract(data, averageVector)
 
     print("Computing covMat of DT")
     covMat = np.cov(data.T, rowvar=False)
-    print(len(covMat))
-    print(len(covMat[0]))
 
     print("Computing eigen(vector|values)")
     eigenValues, eigenVectors = np.linalg.eig(covMat)
-    print(len(eigenVectors))
-    print(len(eigenValues))
 
     eigenFaces = data.T.dot(eigenVectors)
     eigenFaces = preprocessing.normalize(eigenFaces)
@@ -163,11 +168,8 @@ elif args.action == "findBestR":
     print("Loading model")
     m = loadModel("model.pkl")
 
-    print("Loading and transform posProbes")
-    posProbes = loadAndTransform(DATASET_DIR_POSITIVE, m)
-
     print("Computing bestR")
-    bestR = findBestR(m["gallery"], posProbes)
+    bestR = findBestR(m["gallery"])
     print("Best R is:", bestR)
 
     print("Updating model")
