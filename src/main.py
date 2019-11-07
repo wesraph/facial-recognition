@@ -1,6 +1,7 @@
 from os import listdir
 from os.path import isfile, join
 from sklearn import preprocessing
+import os
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
@@ -9,6 +10,7 @@ import search
 import argparse
 import sys
 import pickle
+import re
 
 DATASET_DIR_1="../data/dataset1/images/"
 DATASET_DIR_POSITIVE="../data/dataset1/positive/"
@@ -26,6 +28,8 @@ def loadImageToArray(path):
     jpg_count = len(jpg_list)
     img_array = []
     for i in range(0, jpg_count):
+        if not re.search("\.jpg$|\.png$", jpg_list[i]):
+            continue
         img = mpimg.imread(path + jpg_list[i])
         img_array.append(np.array(img).flatten())
 
@@ -33,8 +37,10 @@ def loadImageToArray(path):
 
 def findBestR(model, isRandom=False, limit=100):
     print("Computing average R")
+    print("lenGallery", len(m["gallery"]))
+
     gallery = m["gallery"]
-    origin = np.zeros((1, len(gallery)))
+    origin = np.zeros((1, len(gallery[0])))
     distances = search.compute_distances(gallery, origin)
     averageR = np.sum(distances) / len(distances)
     print("Average R:", averageR)
@@ -98,6 +104,9 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
     print("Refused probes: ", refusedProbes / (lenPosProbes + lenNegProbes))
     print("Accepted probes: ", falseRefusedProbes / (lenPosProbes + lenNegProbes))
 
+    globalEfficiency = (acceptedProbes / (lenPosProbes + lenNegProbes)) + (refusedProbes / (lenPosProbes + lenNegProbes))
+    return globalEfficiency
+
 def applyPCA(data):
     print("Compute average vector")
     data = np.array(data)
@@ -156,15 +165,37 @@ def loadModel(path):
     with open(path, "rb") as f:
         return pickle.load(f)
 
-def transformGalleryAndSave(path, eigenFaces,):
-    print("Loading gallery")
-    gallery = loadImageToArray(path)
-    print("Transforming gallery")
-    gallery = transformDataset(gallery, eigenFaces, averageVector)
-
 def loadAndTransform(path, m):
     data = loadImageToArray(path)
     return transformDataset(data, m['eigenFaces'], m['averageVector'])
+
+def settingsImpact(m):
+    print("Loading and transform posProbes")
+    posProbes = loadAndTransform(DATASET_DIR_POSITIVE, m)
+    print("Loading and transform negProves")
+    negProbes = loadAndTransform(DATASET_DIR_NEGATIVE, m)
+
+    m["gallery"], posProbes, negProbes = reduceSpaces(m["gallery"], posProbes, negProbes)
+    print(len(m["gallery"]))
+    print("reduced gallery length", len(m["gallery"][0]))
+    print("reduced posProbes length", len(posProbes[0]))
+    print("reduced negProbes length", len(negProbes[0]))
+
+    r = findBestR(m, isRandom=True, limit=1000)
+    print(r)
+
+    percentageRange = np.arange(-0.5, 0.5, 0.05)
+    efficiencyAxis = []
+    for percent in percentageRange:
+        print( r + r*percent)
+        efficiency = evaluateRadius(m["gallery"], posProbes, negProbes, r + r*percent)
+        print(efficiency)
+        efficiencyAxis.append(efficiency)
+        print(percent*100, "%")
+    plt.plot(percentageRange*100, efficiencyAxis)
+
+def reduceSpaces(gallery, posProbes, negProbes, nbEF = 20):
+        return [i[:nbEF] for i in gallery],[i[:nbEF] for i in posProbes],[i[:nbEF] for i in negProbes]
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--action", type=str,
@@ -182,7 +213,11 @@ if args.action == "plotEigenValues":
     print(ev)
     plt.show()
 
-if args.action == "generateModel":
+elif args.action == "settingsImpact":
+    m = loadModel("model.pkl")
+    settingsImpact(m)
+
+elif args.action == "generateModel":
     print("Generating model")
     trainModelAndSave(DATASET_DIR_1)
 
