@@ -111,8 +111,7 @@ def applyPCA(data):
     covMat = np.cov(data.T, rowvar=False)
 
     print("Computing eigen(vector|values)")
-    eigenValues, eigenVectors = np.linalg.eig(covMat)
-
+    eigenValues, eigenVectors = np.linalg.eigh(covMat)
     eigenFaces = data.T.dot(eigenVectors)
     eigenFaces = preprocessing.normalize(eigenFaces)
 
