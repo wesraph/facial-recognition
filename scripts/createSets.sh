@@ -4,25 +4,23 @@ set -e
 echo "Creating positive probes"
 mkdir -p data/dataset1/{positive,negative}
 
-mv data/dataset1/images/*.1.jpg data/dataset1/positive
+echo $(pwd)
 
-i=0
-for image in dataset1/positive/*:
+IFS=$'\n'
+i=1
+find  data/dataset1/images -type f | shuf | while read -r f
 do
-  [ $i -gt 100  ] && {
-    rm "$image"
-  }
+  mv "$f" data/dataset1/positive
   i=$((i + 1))
+  [ $i -gt 100  ] && break
 done
 
 echo "Creating negative probes"
-cp data/dataset2/images/*.1.jpg data/dataset1/negative
 
-i=0
-for image in dataset1/negative/*:
+i=1
+find  data/dataset2/images -type f | shuf | while read -r f
 do
-  [ $i -gt 100  ] && {
-    rm "$image"
-  }
+  mv "$f" data/dataset1/negative
   i=$((i + 1))
+  [ $i -gt 100  ] && break
 done
