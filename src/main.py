@@ -2,7 +2,9 @@ from os import listdir
 from os.path import isfile, join
 from sklearn import preprocessing
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import numpy as np
+import random
 import search
 import argparse
 import sys
@@ -29,12 +31,19 @@ def loadImageToArray(path):
 
     return img_array
 
-def findBestR(gallery, random=False, limit=100):
+def findBestR(model, isRandom=False, limit=100):
+    print("Computing average R")
+    gallery = m["gallery"]
+    origin = np.zeros((1, len(gallery)))
+    distances = search.compute_distances(gallery, origin)
+    averageR = np.sum(distances) / len(distances)
+    print("Average R:", averageR)
+
     r = 0
     lenGallery = len(gallery)
     iterator = []
 
-    if random:
+    if isRandom:
        iterator = [random.randint(0, lenGallery) for i in range(0, limit)]
     else:
         iterator = range(0, lenGallery)
@@ -42,13 +51,16 @@ def findBestR(gallery, random=False, limit=100):
     print(iterator)
     lenIterator = len(iterator)
 
-    for i in interator:
-        print((i / lenIterator * 100))
+    u = 0
+    for i in iterator:
+        print((u / lenIterator * 100))
+        u = u + 1
+
         sliced = np.concatenate([gallery[:i],gallery[i+1:]])
 
         distances = search.compute_distances(sliced, gallery[i])
         dmax = np.amin(distances)
-        if dmax > r:
+        if dmax > r and dmax < 2 * averageR:
             r = dmax
 
     return r
@@ -160,6 +172,17 @@ parser.add_argument("-a", "--action", type=str,
                     help="[generateModel, findBestR, evaluateRadius]")
 
 args = parser.parse_args()
+if args.action == "plotEigenValues":
+    print("Printing eigenValues")
+
+    m = loadModel("model.pkl")
+    ev = np.flip(np.sort(m["eigenValues"]))
+    average = np.sum(ev)
+    ev = ev / average
+    plt.plot(ev[:100])
+    print(ev)
+    plt.show()
+
 if args.action == "generateModel":
     print("Generating model")
     trainModelAndSave(DATASET_DIR_1)
@@ -169,7 +192,7 @@ elif args.action == "findBestR":
     m = loadModel("model.pkl")
 
     print("Computing bestR")
-    bestR = findBestR(m["gallery"])
+    bestR = findBestR(m, isRandom=True, limit=200)
     print("Best R is:", bestR)
 
     print("Updating model")
