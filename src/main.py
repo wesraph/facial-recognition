@@ -34,8 +34,8 @@ def loadImageToArray(path):
 def findBestR(model, isRandom=False, limit=100):
     print("Computing average R")
     gallery = m["gallery"]
-    origin = np.zeros((1, len(gallery)))
-    distances = search.compute_distances(gallery, origin)
+    averageVector = np.mean(gallery, axis=0)
+    distances = search.compute_distances(gallery, averageVector)
     averageR = np.sum(distances) / len(distances)
     print("Average R:", averageR)
 
@@ -168,7 +168,9 @@ def loadAndTransform(path, m):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--action", type=str,
-                    help="[generateModel, findBestR, evaluateRadius]")
+                    help="[plotEigenValues, generateModel, findBestR, createRawModel, perfCompare, evaluateRadius]")
+
+
 
 args = parser.parse_args()
 if args.action == "plotEigenValues":
@@ -197,6 +199,15 @@ elif args.action == "findBestR":
     print("Updating model")
     m["r"] = bestR
     saveModel(m)
+
+elif args.action == "createRawModel":
+    print("Creating raw model (no optimisation)")
+    m  = {}
+    m["gallery"] = loadImageToArray(DATASET_DIR_1)
+    m["r"] = findBestR(m, isRandom=True, limit=200)
+
+    print("Saving model")
+    saveModel("rawModel.pkl")
 
 elif args.action == "evaluateRadius":
     print("Loading model")
