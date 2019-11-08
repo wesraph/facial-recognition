@@ -154,6 +154,10 @@ def applyPCA(data):
 
 
 def reduceSpaces(gallery, eigenValues, n=10):
+    if len(gallery[0]) < n:
+        print("The model you are trying to reduce is too small")
+        sys.exit(1)
+
     indices = np.flip(np.argsort(eigenValues))
     newGallery = []
     for i in range(0, len(gallery)):
@@ -252,6 +256,40 @@ def queryModel(m, query):
     minDist = np.amin(indices)
     return  minDist < m["r"]
 
+def benchmarkCompsNb(modelPath):
+    m = loadModel(modelPath)
+
+    if not "eigenValues" in m:
+        print("You cannot benchmark the number of components on a raw model")
+        sys.exit(1)
+
+    print("Loading and transform posProbes")
+    posProbes = loadAndTransform(DATASET_DIR_POSITIVE, m)
+    print("Loading and transform negProves")
+    negProbes = loadAndTransform(DATASET_DIR_NEGATIVE, m)
+
+    # TODO: Improve range (maybe 2 benchmarks ?)
+    nPropsRange = np.arange(1, 2000, 5)
+    efficiencyAxis = []
+    speedAxis = []
+    for nProps in nPropsRange:
+        redPosProbes = reduceSpaces(posProbes, m["eigenValues"], nProps)
+        redNegProbes = reduceSpaces(negProbes, m["eigenValues"], nProps)
+        gallery = reduceSpaces(m["gallery"], m["eigenValues"], nProps)
+
+        results = evaluateRadius(gallery, redPosProbes, redNegProbes, nProps)
+
+        print("Number of components:", nProps)
+        printPerfResults(results)
+
+        efficiencyAxis.append(results["globalEfficiency"])
+        speedAxis.append(results["duration"])
+
+    plt.plot(nPropsRange, speedAxis)
+    plt.show()
+    plt.plot(nPropsRange, efficiencyAxis)
+
+
 def benchmarkR(modelPath):
     m = loadModel(modelPath)
 
@@ -264,19 +302,14 @@ def benchmarkR(modelPath):
     print("Loading and transform negProves")
     negProbes = loadAndTransform(DATASET_DIR_NEGATIVE, m)
 
-    m["gallery"] = reduceSpaces(m["gallery"], m["eigenValues"])
-    posProbes = reduceSpaces(posProbes, m["eigenValues"])
-    negProbes = reduceSpaces(negProbes, m["eigenValues"])
-
-    r = m["r"]
-
     percentageRange = np.arange(-0.5, 0.5, 0.05)
     efficiencyAxis = []
+    r = m["r"]
     for percent in percentageRange:
-        efficiency = evaluateRadius(m["gallery"], posProbes, negProbes, r + r*percent)
-        efficiencyAxis.append(efficiency["globalEfficiency"])
+        results = evaluateRadius(m["gallery"], posProbes, negProbes, r + r*percent)
+        efficiencyAxis.append(results["globalEfficiency"])
         print("Result for difference of ",percent*100, "%")
-        printPerfResults(efficiency)
+        printPerfResults(results)
 
     plt.plot(percentageRange*100, efficiencyAxis)
     plt.show()
@@ -284,7 +317,7 @@ def benchmarkR(modelPath):
 parser = argparse.ArgumentParser()
 parser.add_argument("-gb", "--generateBaseModel", action="store_true", help="generate a base model (PCA with all principal components)")
 parser.add_argument("-gr", "--generateRawModel", action="store_true", help="generate a model without transformations")
-parser.add_argument("-gm", "--generateModel", action="store_true", help="generate a reduced model from the base model")
+parser.add_argument("-gm", "--generateReducedModel", action="store_true", help="generate a reduced model from the base model")
 parser.add_argument("-s", "--showModel", action="store_true", help="plot the eigenValues of the model")
 parser.add_argument("-bcn", "--benchmarkCompsNb", action="store_true", help="benchmark the impact of the number of kept principal components of the model")
 parser.add_argument("-br", "--benchmarkR", action="store_true", help="benchmark the impact of R values")
@@ -303,11 +336,15 @@ elif args.benchmarkR:
     print("Benchmarking R")
     benchmarkR(args.model)
 
+elif args.benchmarkCompsNb:
+    print("Benchmarking number of components")
+    benchmarkCompsNb(args.model)
+
 elif args.generateBaseModel:
     print("Generating model")
     trainModelAndSave(DATASET_DIR_1)
 
-elif args.generateModel:
+elif args.generateReducedModel:
     print("Not implemented")
     sys.exit(1)
 
