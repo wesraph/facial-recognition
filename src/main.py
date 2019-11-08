@@ -56,7 +56,7 @@ def showModel(path):
 
     plt.show()
 
-def findBestR(model, isRandom=False, limit=100):
+def findBestR(m, isRandom=False, limit=100):
     print("Computing average R")
     gallery = m["gallery"]
     lenGallery = len(m["gallery"])
@@ -114,7 +114,7 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
         else:
             refusedProbes += 1
 
-    duration = duration - time.time()
+    duration = time.time() - duration
     print("Accepted probes: ", acceptedProbes / (lenPosProbes + lenNegProbes))
     print("False accepted probes: ", falseAcceptedProbes / (lenPosProbes + lenNegProbes))
     print("Refused probes: ", refusedProbes / (lenPosProbes + lenNegProbes))
@@ -220,20 +220,30 @@ def getPerfomances(modelPath):
         negProbes = transformDataset(negProbes, m["eigenFaces"], m["averageVector"])
     transformTime = time.time() - transformTime
 
-
     print("Mesuring perfomances of ", modelPath)
     results = evaluateRadius(m["gallery"], posProbes, negProbes, m["r"])
     results["duration"] += transformTime
 
     return results
 
+def printPerfResults(perf):
+    print(" Accuracy:", round(perf["accuracy"], 3))
+    print(" Precision:",  round(perf["precision"], 3))
+    print(" Sensibility:",round(perf["sensibility"], 3))
+    print(" Specificity:",round(perf["specificity"], 3))
+    print(" Duration:",   round(perf["duration"], 3))
+
+
 def perfCompare(modelAPath, modelBPath):
     print("Comparing performances")
     maResults = getPerfomances(modelAPath)
     mbResults = getPerfomances(modelBPath)
 
-    print(maResults)
-    print(mbResults)
+    print("Model A:")
+    printPerfResults(maResults)
+
+    print("Model B:")
+    printPerfResults(mbResults)
 
     print("Acceleration factor (b / a):", round(mbResults["duration"] / maResults["duration"] , 3))
 
@@ -242,7 +252,13 @@ def queryModel(m, query):
     minDist = np.amin(indices)
     return  minDist < m["r"]
 
-def settingsImpact(m):
+def benchmarkR(modelPath):
+    m = loadModel(modelPath)
+
+    if not "eigenValues" in m:
+        print("You cannot benchmark the number of components on a raw model")
+        sys.exit(1)
+
     print("Loading and transform posProbes")
     posProbes = loadAndTransform(DATASET_DIR_POSITIVE, m)
     print("Loading and transform negProves")
@@ -252,23 +268,18 @@ def settingsImpact(m):
     posProbes = reduceSpaces(posProbes, m["eigenValues"])
     negProbes = reduceSpaces(negProbes, m["eigenValues"])
 
-    print(len(m["gallery"]))
-    print("reduced gallery length", len(m["gallery"][0]))
-    print("reduced posProbes length", len(posProbes[0]))
-    print("reduced negProbes length", len(negProbes[0]))
-
-    r = findBestR(m, isRandom=True, limit=200)
-    print(r)
+    r = m["r"]
 
     percentageRange = np.arange(-0.5, 0.5, 0.05)
     efficiencyAxis = []
     for percent in percentageRange:
-        print( r + r*percent)
-        efficiency = evaluateRadius(m["gallery"], posProbes, negProbes, r + r*percent)["globalEfficiency"]
-        print(efficiency)
-        efficiencyAxis.append(efficiency)
-        print(percent*100, "%")
+        efficiency = evaluateRadius(m["gallery"], posProbes, negProbes, r + r*percent)
+        efficiencyAxis.append(efficiency["globalEfficiency"])
+        print("Result for difference of ",percent*100, "%")
+        printPerfResults(efficiency)
+
     plt.plot(percentageRange*100, efficiencyAxis)
+    plt.show()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-gb", "--generateBaseModel", action="store_true", help="generate a base model (PCA with all principal components)")
@@ -276,6 +287,7 @@ parser.add_argument("-gr", "--generateRawModel", action="store_true", help="gene
 parser.add_argument("-gm", "--generateModel", action="store_true", help="generate a reduced model from the base model")
 parser.add_argument("-s", "--showModel", action="store_true", help="plot the eigenValues of the model")
 parser.add_argument("-bcn", "--benchmarkCompsNb", action="store_true", help="benchmark the impact of the number of kept principal components of the model")
+parser.add_argument("-br", "--benchmarkR", action="store_true", help="benchmark the impact of R values")
 parser.add_argument("-cr", "--computeR", action="store_true", help="compute R for the model")
 parser.add_argument("-cm", "--compareModels", action="store_true", help="compare the performances of two models")
 parser.add_argument("-e", "--evaluateModel", action="store_true", help="evalute the accuracy of a model")
@@ -287,9 +299,9 @@ args = parser.parse_args()
 if args.showModel:
     showModel(args.model)
 
-elif args.benchmarkCompsNb:
-    m = loadModel(args.model)
-    settingsImpact(m)
+elif args.benchmarkR:
+    print("Benchmarking R")
+    benchmarkR(args.model)
 
 elif args.generateBaseModel:
     print("Generating model")
