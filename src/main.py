@@ -205,37 +205,37 @@ def loadAndTransform(path, m):
     data = loadImageToArray(path)
     return transformDataset(data, m['eigenFaces'], m['averageVector'])
 
-def perfCompare():
-    print("Comparing performances")
+def getPerfomances(modelPath):
+    print("Loading ", modelPath)
+    m = loadModel(modelPath)
 
-    print("Loading optimised model")
-    m = loadModel("model.pkl")
-    print("Loading posProbes")
+    print("Loading probes")
     posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
     negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
 
-    print("Transforming posProbes")
     transformTime = time.time()
-    posProbes = transformDataset(posProbes, m["eigenFaces"], m["averageVector"])
-    negProbes = transformDataset(negProbes, m["eigenFaces"], m["averageVector"])
+    if "eigenFaces" in m:
+        print("Transforming probes")
+        posProbes = transformDataset(posProbes, m["eigenFaces"], m["averageVector"])
+        negProbes = transformDataset(negProbes, m["eigenFaces"], m["averageVector"])
     transformTime = time.time() - transformTime
 
 
-    results = {}
-    print("Mesuring perfomances of optimised model")
-    results["m"] = evaluateRadius(m["gallery"], posProbes, negProbes, m["r"])
-    results["m"]["duration"] += transformTime
+    print("Mesuring perfomances of ", modelPath)
+    results = evaluateRadius(m["gallery"], posProbes, negProbes, m["r"])
+    results["duration"] += transformTime
 
-    print("Loading raw model")
-    m = loadModel("rawModel.pkl")
-    print("Reloading probes")
-    posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
-    negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
+    return results
 
-    print("Mesuring performances of raw model")
-    results["rmm"] = evaluateRadius(m["gallery"], posProbes, negProbes, m["r"])
+def perfCompare(modelAPath, modelBPath):
+    print("Comparing performances")
+    maResults = getPerfomances(modelAPath)
+    mbResults = getPerfomances(modelBPath)
 
-    print(results)
+    print(maResults)
+    print(mbResults)
+
+    print("Acceleration factor (b / a):", round(mbResults["duration"] / maResults["duration"] , 3))
 
 def queryModel(m, query):
     indices, results = search.radius_search(m["gallery"], query, r=m["r"])
@@ -279,14 +279,16 @@ parser.add_argument("-bcn", "--benchmarkCompsNb", action="store_true", help="ben
 parser.add_argument("-cr", "--computeR", action="store_true", help="compute R for the model")
 parser.add_argument("-cm", "--compareModels", action="store_true", help="compare the performances of two models")
 parser.add_argument("-e", "--evaluateModel", action="store_true", help="evalute the accuracy of a model")
-parser.add_argument("-mp", "--modelPath", default="model.pkl", help="path of the model to load")
+parser.add_argument("-m", "--model", default="model.pkl", help="path of the model to load")
+parser.add_argument("-ma", "--modelA", default="model.pkl", help="path of the model to load")
+parser.add_argument("-mb", "--modelB", default="model.pkl", help="path of the model to load")
 
 args = parser.parse_args()
 if args.showModel:
-    showModel(args.modelPath)
+    showModel(args.model)
 
 elif args.benchmarkCompsNb:
-    m = loadModel("model.pkl")
+    m = loadModel(args.model)
     settingsImpact(m)
 
 elif args.generateBaseModel:
@@ -319,7 +321,12 @@ elif args.generateRawModel:
     saveModel(m, "rawModel.pkl")
 
 elif args.compareModels:
-    perfCompare()
+    if not args.modelA:
+        print("Missing modelA argument")
+        sys.exit(1)
+    if not args.modelB:
+        print("Missing modelB argument")
+    perfCompare(args.modelA, args.modelB)
 
 elif args.evaluateModel:
     print("Loading model")
