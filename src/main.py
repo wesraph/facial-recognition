@@ -9,6 +9,7 @@ import search
 import argparse
 import sys
 import pickle
+import time
 
 DATASET_DIR_1="../data/dataset1/images/"
 DATASET_DIR_POSITIVE="../data/dataset1/positive/"
@@ -37,7 +38,6 @@ def findBestR(model, isRandom=False, limit=100):
     averageVector = np.mean(gallery, axis=0)
     distances = search.compute_distances(gallery, averageVector)
     averageR = np.sum(distances) / len(distances)
-    print("Average R:", averageR)
 
     r = 0
     lenGallery = len(gallery)
@@ -48,7 +48,6 @@ def findBestR(model, isRandom=False, limit=100):
     else:
         iterator = range(0, lenGallery)
 
-    print(iterator)
     lenIterator = len(iterator)
 
     u = 0
@@ -79,6 +78,7 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
     refusedProbes = 0
     falseRefusedProbes = 0
 
+    duration = time.time()
     for i in range(0, lenPosProbes):
         indices, results = search.radius_search(gallery, posProbes[i], r=r)
         if(len(indices) != 0):
@@ -93,10 +93,21 @@ def evaluateRadius(gallery, posProbes, negProbes, r):
         else:
             refusedProbes += 1
 
+    duration = duration - time.time()
     print("Accepted probes: ", acceptedProbes / (lenPosProbes + lenNegProbes))
     print("False accepted probes: ", falseAcceptedProbes / (lenPosProbes + lenNegProbes))
     print("Refused probes: ", refusedProbes / (lenPosProbes + lenNegProbes))
     print("Accepted probes: ", falseRefusedProbes / (lenPosProbes + lenNegProbes))
+
+    results = {}
+    results["accuracy"] = (acceptedProbes + refusedProbes) / (acceptedProbes + falseRefusedProbes + refusedProbes + falseRefusedProbes)
+    results["precision"] = (acceptedProbes) / (acceptedProbes + falseAcceptedProbes)
+    results["sensibility"] = (acceptedProbes) / (acceptedProbes + falseRefusedProbes)
+    results["specificity"] = (refusedProbes) / (refusedProbes + falseAcceptedProbes)
+    results["duration"] = duration
+
+    return results
+
 
 def applyPCA(data):
     print("Compute average vector")
@@ -146,17 +157,17 @@ def trainModelAndSave(path):
     model["gallery"] = transformDataset(data, model["eigenFaces"], model["averageVector"])
 
     print("Saving")
-    saveModel(model)
+    saveModel(model, "model.pkl")
 
-def saveModel(m):
-    with open("model.pkl", "wb") as f:
+def saveModel(m, filename):
+    with open(filename, "wb") as f:
         pickle.dump(m, f, pickle.HIGHEST_PROTOCOL)
 
 def loadModel(path):
     with open(path, "rb") as f:
         return pickle.load(f)
 
-def transformGalleryAndSave(path, eigenFaces,):
+def transformGalleryAndSave(path, eigenFaces, averageVector):
     print("Loading gallery")
     gallery = loadImageToArray(path)
     print("Transforming gallery")
@@ -166,9 +177,46 @@ def loadAndTransform(path, m):
     data = loadImageToArray(path)
     return transformDataset(data, m['eigenFaces'], m['averageVector'])
 
+def perfCompare():
+    print("Comparing performances")
+
+    print("Loading optimised model")
+    m = loadModel("model.pkl")
+    print("Loading posProbes")
+    posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
+    negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
+
+    print("Transforming posProbes")
+    transformTime = time.time()
+    posProbes = transformDataset(posProbes, m["eigenFaces"], m["averageVector"])
+    negProbes = transformDataset(negProbes, m["eigenFaces"], m["averageVector"])
+    transformTime = time.time() - transformTime
+
+
+    results = {}
+    print("Mesuring perfomances of optimised model")
+    results["m"] = evaluateRadius(m["gallery"], posProbes, negProbes, m["r"])
+    results["m"]["duration"] += transformTime
+
+    print("Loading raw model")
+    m = loadModel("rawModel.pkl")
+    print("Reloading probes")
+    posProbes = loadImageToArray(DATASET_DIR_POSITIVE)
+    negProbes = loadImageToArray(DATASET_DIR_NEGATIVE)
+
+    print("Mesuring performances of raw model")
+    results["rmm"] = evaluateRadius(m["gallery"], posProbes, negProbes, m["r"])
+
+    print(results)
+
+def queryModel(m, query):
+    indices, results = search.radius_search(m["gallery"], query, r=m["r"])
+    minDist = np.amin(indices)
+    return  minDist < m["r"]
+
 parser = argparse.ArgumentParser()
 parser.add_argument("-a", "--action", type=str,
-                    help="[plotEigenValues, generateModel, findBestR, createRawModel, perfCompare, evaluateRadius]")
+                    help="[plotEigenValues, generateModel, findBestR, createRawModel, pgenerateModel, findBestR, evaluateRadius, plotEigenValues, createRawModel,erfCompare, evaluateRadius]")
 
 
 
@@ -198,16 +246,19 @@ elif args.action == "findBestR":
 
     print("Updating model")
     m["r"] = bestR
-    saveModel(m)
+    saveModel(m, "model.pkl")
 
-elif args.action == "createRawModel":
+elif args.action == "generateRawModel":
     print("Creating raw model (no optimisation)")
     m  = {}
     m["gallery"] = loadImageToArray(DATASET_DIR_1)
     m["r"] = findBestR(m, isRandom=True, limit=200)
 
     print("Saving model")
-    saveModel("rawModel.pkl")
+    saveModel(m, "rawModel.pkl")
+
+elif args.action == "perfCompare":
+    perfCompare()
 
 elif args.action == "evaluateRadius":
     print("Loading model")
