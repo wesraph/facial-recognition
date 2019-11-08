@@ -47,8 +47,8 @@ def showModel(path):
         return
 
     ev = np.flip(np.sort(m["eigenValues"]))
-    average = np.sum(ev)
-    ev = ev / average
+    evSum = np.sum(ev)
+    ev = ev / m["originalSumEigenValues"]
     plt.plot(ev[:100])
 
     inertia = round(np.sum(ev[:len(m["gallery"][0])]) * 100, 3)
@@ -56,7 +56,7 @@ def showModel(path):
 
     plt.show()
 
-def findBestR(m, isRandom=False, limit=100):
+def findBestR(m, isRandom=True, limit=100):
     print("Computing average R")
     gallery = m["gallery"]
     lenGallery = len(m["gallery"])
@@ -72,7 +72,7 @@ def findBestR(m, isRandom=False, limit=100):
     dmax = []
 
     for i in iterator:
-        print((u / lenIterator * 100))
+        print(round((u / lenIterator * 100), 3), "%")
         u = u + 1
         sliced = np.concatenate((gallery[:i],gallery[i+1:]), axis=0)
         distances = search.compute_distances(sliced, gallery[i])
@@ -183,7 +183,7 @@ def toListNDArray(data):
 
 def trainModelAndSave(path):
     print("Loading dataset (images to array)")
-    data = loadImageToArray(path)
+    data = loadImageToArray(DATASET_DIR_1)
 
     model = {}
     model["eigenFaces"], model["eigenValues"], model["averageVector"] = applyPCA(data)
@@ -194,8 +194,44 @@ def trainModelAndSave(path):
     print("Transforming gallery")
     model["gallery"] = transformDataset(data, model["eigenFaces"], model["averageVector"])
 
+    print("Searching bestR")
+    model["r"] = findBestR(model, limit=200)
+
+    # Store the sum of eigenValues
+    model["originalSumEigenValues"] = np.sum(model["eigenValues"])
+
     print("Saving")
-    saveModel(model, "model.pkl")
+    saveModel(model, path)
+
+def generateReducedModel(maPath, mbPath, nComponents):
+    print("Loading model A")
+    ma = loadModel(maPath)
+
+    mb = {}
+    print("Reducing space to", nComponents, "components")
+    mb["gallery"] = reduceSpaces(ma["gallery"], ma["eigenValues"], nComponents)
+
+    print(len(mb["gallery"]))
+    print(len(mb["gallery"][0]))
+    # Keep the original eigenValues and eigenVectors
+    mb["eigenValues"] = np.flip(ma["eigenValues"])[:nComponents]
+    mb["eigenFaces"] = np.flip(ma["eigenFaces"])[:nComponents]
+
+    ev = np.flip(np.sort(ma["eigenValues"]))
+    evSum = np.sum(ev)
+    ev = ev / evSum
+
+    inertia = round(np.sum(ev[:nComponents]) * 100, 3)
+    print("New inertia is of", inertia, "%")
+
+    print("Recomputing average vector")
+    mb["averageVector"] = np.mean(mb["gallery"], axis=0)
+
+    print("Computing R")
+    mb["r"] = findBestR(mb, limit=200)
+
+    print("Saving new model to", mbPath)
+    saveModel(mb, mbPath)
 
 def saveModel(m, filename):
     with open(filename, "wb") as f:
@@ -262,10 +298,8 @@ def setModelSettings(modelPath, r, nComponents):
 
     if r:
         m["r"] = r
-    if nComponents:
-        m["gallery"] = reduceSpaces(m["gallery"], m["eigenValues"], nComponents)
 
-    print("Saving")
+    print("Savingj")
     saveModel(m, modelPath)
 
 def benchmarkCompsNb(modelPath):
@@ -329,6 +363,8 @@ def benchmarkR(modelPath):
 parser = argparse.ArgumentParser()
 parser.add_argument("-gb", "--generateBaseModel", action="store_true", help="generate a base model (PCA with all principal components)")
 parser.add_argument("-gr", "--generateRawModel", action="store_true", help="generate a model without transformations")
+
+# TODO: Add the usage of nComponents
 parser.add_argument("-gm", "--generateReducedModel", action="store_true", help="generate a reduced model from the base model")
 
 parser.add_argument("-sm", "--setModelSettings", action="store_true", help="set a setting of the model")
@@ -342,15 +378,15 @@ parser.add_argument("-cr", "--computeR", action="store_true", help="compute R fo
 parser.add_argument("-cm", "--compareModels", action="store_true", help="compare the performances of two models")
 parser.add_argument("-e", "--evaluateModel", action="store_true", help="evalute the accuracy of a model")
 parser.add_argument("-m", "--model", default="model.pkl", help="path of the model to load")
-parser.add_argument("-ma", "--modelA", default="model.pkl", help="path of the model to load")
-parser.add_argument("-mb", "--modelB", default="model.pkl", help="path of the model to load")
+parser.add_argument("-ma", "--modelA", default="model.pkl", help="path of the model A to load")
+parser.add_argument("-mb", "--modelB", help="path of the model B to load")
 
 args = parser.parse_args()
 if args.showModel:
     showModel(args.model)
 
 if args.setModelSettings:
-    setModelSettings(args.model, args.r, args.nComponents)
+    setModelSettings(args.model, args.r)
 
 elif args.benchmarkR:
     print("Benchmarking R")
@@ -362,18 +398,28 @@ elif args.benchmarkCompsNb:
 
 elif args.generateBaseModel:
     print("Generating model")
-    trainModelAndSave(DATASET_DIR_1)
+    trainModelAndSave(args.model)
 
 elif args.generateReducedModel:
-    print("Not implemented")
-    sys.exit(1)
+    if not args.nComponents:
+        print("You must specify nComponents")
+        sys.exit(1)
+
+    if not args.modelA:
+        print("Using default model as input model")
+        args.modelA = args.model
+
+    if not args.modelB:
+        print("You must specify the output model (modelB)")
+        sys.exit(1)
+    generateReducedModel(args.modelA, args.modelB, args.nComponents)
 
 elif args.computeR:
     print("Loading model")
     m = loadModel("model.pkl")
 
     print("Computing bestR")
-    bestR = findBestR(m, isRandom=True, limit=200)
+    bestR = findBestR(m, limit=200)
     print("Best R is:", bestR)
 
     print("Updating model")
@@ -384,7 +430,7 @@ elif args.generateRawModel:
     print("Creating raw model (no optimisation)")
     m  = {}
     m["gallery"] = loadImageToArray(DATASET_DIR_1)
-    m["r"] = findBestR(m, isRandom=True, limit=200)
+    m["r"] = findBestR(m, limit=200)
 
     print("Saving model")
     saveModel(m, "rawModel.pkl")
