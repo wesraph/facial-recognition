@@ -36,6 +36,26 @@ def loadImageToArray(path):
 
     return img_array
 
+def showModel(path):
+    print("Loading model")
+    m = loadModel(path)
+
+    print("R:", m["r"])
+    print("Number of components:", len(m["gallery"][0]))
+
+    if not "eigenValues" in m:
+        return
+
+    ev = np.flip(np.sort(m["eigenValues"]))
+    average = np.sum(ev)
+    ev = ev / average
+    plt.plot(ev[:100])
+
+    inertia = round(np.sum(ev[:len(m["gallery"][0])]) * 100, 3)
+    print("Inertia:", inertia, "%")
+
+    plt.show()
+
 def findBestR(model, isRandom=False, limit=100):
     print("Computing average R")
     gallery = m["gallery"]
@@ -222,10 +242,6 @@ def queryModel(m, query):
     minDist = np.amin(indices)
     return  minDist < m["r"]
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-a", "--action", type=str,
-                    help="[plotEigenValues, generateModel, findBestR, createRawModel, pgenerateModel, findBestR, evaluateRadius, plotEigenValues, createRawModel,erfCompare, evaluateRadius]")
-
 def settingsImpact(m):
     print("Loading and transform posProbes")
     posProbes = loadAndTransform(DATASET_DIR_POSITIVE, m)
@@ -255,30 +271,33 @@ def settingsImpact(m):
     plt.plot(percentageRange*100, efficiencyAxis)
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-a", "--action", type=str,
-                    help="[generateModel, findBestR, evaluateRadius]")
+parser.add_argument("-gb", "--generateBaseModel", action="store_true", help="generate a base model (PCA with all principal components)")
+parser.add_argument("-gr", "--generateRawModel", action="store_true", help="generate a model without transformations")
+parser.add_argument("-gm", "--generateModel", action="store_true", help="generate a reduced model from the base model")
+parser.add_argument("-s", "--showModel", action="store_true", help="plot the eigenValues of the model")
+parser.add_argument("-bcn", "--benchmarkCompsNb", action="store_true", help="benchmark the impact of the number of kept principal components of the model")
+parser.add_argument("-cr", "--computeR", action="store_true", help="compute R for the model")
+parser.add_argument("-cm", "--compareModels", action="store_true", help="compare the performances of two models")
+parser.add_argument("-e", "--evaluateModel", action="store_true", help="evalute the accuracy of a model")
+parser.add_argument("-mp", "--modelPath", default="model.pkl", help="path of the model to load")
 
 args = parser.parse_args()
-if args.action == "plotEigenValues":
-    print("Printing eigenValues")
+if args.showModel:
+    showModel(args.modelPath)
 
-    m = loadModel("model.pkl")
-    ev = np.flip(np.sort(m["eigenValues"]))
-    average = np.sum(ev)
-    ev = ev / average
-    plt.plot(ev[:100])
-    print(ev)
-    plt.show()
-
-elif args.action == "settingsImpact":
+elif args.benchmarkCompsNb:
     m = loadModel("model.pkl")
     settingsImpact(m)
 
-elif args.action == "generateModel":
+elif args.generateBaseModel:
     print("Generating model")
     trainModelAndSave(DATASET_DIR_1)
 
-elif args.action == "findBestR":
+elif args.generateModel:
+    print("Not implemented")
+    sys.exit(1)
+
+elif args.computeR:
     print("Loading model")
     m = loadModel("model.pkl")
 
@@ -290,7 +309,7 @@ elif args.action == "findBestR":
     m["r"] = bestR
     saveModel(m, "model.pkl")
 
-elif args.action == "generateRawModel":
+elif args.generateRawModel:
     print("Creating raw model (no optimisation)")
     m  = {}
     m["gallery"] = loadImageToArray(DATASET_DIR_1)
@@ -299,10 +318,10 @@ elif args.action == "generateRawModel":
     print("Saving model")
     saveModel(m, "rawModel.pkl")
 
-elif args.action == "perfCompare":
+elif args.compareModels:
     perfCompare()
 
-elif args.action == "evaluateRadius":
+elif args.evaluateModel:
     print("Loading model")
     m = loadModel("model.pkl")
     if not "r" in m:
@@ -317,6 +336,7 @@ elif args.action == "evaluateRadius":
 
     print("Evaluating radius")
     evaluateRadius(m["gallery"], posProbes, negProbes, m["r"])
+
 else:
     parser.print_help()
     sys.exit(1)
