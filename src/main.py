@@ -256,6 +256,18 @@ def queryModel(m, query):
     minDist = np.amin(indices)
     return  minDist < m["r"]
 
+def setModelSettings(modelPath, r, nComponents):
+    print("Loading ", modelPath)
+    m = loadModel(modelPath)
+
+    if r:
+        m["r"] = r
+    if nComponents:
+        m["gallery"] = reduceSpaces(m["gallery"], m["eigenValues"], nComponents)
+
+    print("Saving")
+    saveModel(m, modelPath)
+
 def benchmarkCompsNb(modelPath):
     m = loadModel(modelPath)
 
@@ -318,6 +330,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-gb", "--generateBaseModel", action="store_true", help="generate a base model (PCA with all principal components)")
 parser.add_argument("-gr", "--generateRawModel", action="store_true", help="generate a model without transformations")
 parser.add_argument("-gm", "--generateReducedModel", action="store_true", help="generate a reduced model from the base model")
+
+parser.add_argument("-sm", "--setModelSettings", action="store_true", help="set a setting of the model")
+parser.add_argument("-r", "--r", type=int, help="the r value to set")
+parser.add_argument("-n", "--nComponents", type=int, help="the number of components to use")
+
 parser.add_argument("-s", "--showModel", action="store_true", help="plot the eigenValues of the model")
 parser.add_argument("-bcn", "--benchmarkCompsNb", action="store_true", help="benchmark the impact of the number of kept principal components of the model")
 parser.add_argument("-br", "--benchmarkR", action="store_true", help="benchmark the impact of R values")
@@ -331,6 +348,9 @@ parser.add_argument("-mb", "--modelB", default="model.pkl", help="path of the mo
 args = parser.parse_args()
 if args.showModel:
     showModel(args.model)
+
+if args.setModelSettings:
+    setModelSettings(args.model, args.r, args.nComponents)
 
 elif args.benchmarkR:
     print("Benchmarking R")
