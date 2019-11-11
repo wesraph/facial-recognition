@@ -24,7 +24,7 @@ def saveModel(m, filename):
     print("Saved model", filename)
 
 def loadModel(path):
-    with open("./models/" + path + ".pkl", "rb") as f:
+    with open(path, "rb") as f:
         return pickle.load(f)
 
 def loadAndTransform(path, m):

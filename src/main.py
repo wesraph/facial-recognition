@@ -24,8 +24,8 @@ parser.add_argument("-cm", "--compareModels", action="store_true", help="compare
 
 #######################################    ARGUMENTS     ######################################################
 
-parser.add_argument("-m", "--model", default="pcaModel", help="path of the model to load")
-parser.add_argument("-ma", "--modelA", default="pcaModel", help="path of the model A to load")
+parser.add_argument("-m", "--model", default="./models/pcaModel.pkl", help="path of the model to load")
+parser.add_argument("-ma", "--modelA", default="./models/pcaModel.pkl", help="path of the model A to load")
 parser.add_argument("-mb", "--modelB", help="path of the model B to load")
 parser.add_argument("-r", "--radius", type=int, help="the r value to set")
 parser.add_argument("-n", "--nComponents", type=int, help="the number of components to use")
@@ -35,10 +35,11 @@ args = parser.parse_args()
 
 #Generating model
 if args.generateRawModel:
-    shared.generator.generateRawModel()
+    path = args.model if args.model else "./models/rawModel.pkl"
+    shared.generator.generateRawModel(path)
 
 elif args.generatePCAModel:
-    shared.generator.generatePCAModel()
+    shared.generator.generatePCAModel(args.model)
 
 elif args.generateReducedModel:
     if not args.nComponents:

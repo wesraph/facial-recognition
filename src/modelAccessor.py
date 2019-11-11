@@ -26,7 +26,7 @@ def setModelSettings(modelPath, nComponents, r):
     m = shared.loadModel(modelPath)
 
     if nComponents:
-        m = shared.generator.reduceModel(nComponents, r=False)
+        m = shared.generator.reduceModel(nComponents, args.model, r=False)
     if r:
         m["r"] = r
 
