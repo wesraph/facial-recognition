@@ -95,7 +95,7 @@ def benchmarkR(modelPath):
         posProbes = shared.loadImageToArray(shared.DATASET_DIR_POSITIVE)
         negProbes = shared.loadImageToArray(shared.DATASET_DIR_NEGATIVE)
 
-    percentageRange = np.round(np.arange(-1, 2, 0.25), 2)    
+    percentageRange = np.round(np.arange(-1, 1, 0.25), 2)    
     accuracyAxis = []
     sensibilityAxis = []
     specificity = []
