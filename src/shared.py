@@ -17,9 +17,7 @@ DATASET_DIR_POSITIVE="../data/dataset1/positive/"
 DATASET_DIR_NEGATIVE="../data/dataset1/negative/"
 
 def saveModel(m, filename):
-    if not os.path.isdir('./models') :
-        os.mkdir('./models')
-    with open("./models/" + filename + ".pkl", "wb") as f:
+    with open(filename, "wb") as f:
         pickle.dump(m, f, pickle.HIGHEST_PROTOCOL)
     print("Saved model", filename)
 

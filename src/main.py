@@ -13,6 +13,7 @@ parser.add_argument("-gm", "--generateReducedModel", action="store_true", help="
 #See & Modify a model
 parser.add_argument("-sm", "--setModelSettings", action="store_true", help="set a setting of the model")
 parser.add_argument("-s", "--showModelSettings", action="store_true", help="plot the eigenValues of the model")
+parser.add_argument("-gie", "--generateImageEigenFaces", action="store_true", help="generate the eigenfaces (image) and save it")
 
 #Benchmark a model
 parser.add_argument("-b", "--benchmark", action="store_true", help="evalute the accuracy of a model")
@@ -60,6 +61,9 @@ elif args.setModelSettings:
         shared.sys.exit(1)
     shared.accessor.setModelSettings(args.model, args.nComponents, args.r)
 
+elif args.generateImageEigenFaces:
+    shared.accessor.generateEigenFacesPictures(args.model)
+
 #Benchmark a model
 elif args.benchmark:
     shared.benchmark.benchmark(args.model)
@@ -72,9 +76,6 @@ elif args.benchmarkRadius:
 
 #Compare two models
 elif args.compareModels:
-    if not args.modelA:
-        print("Missing modelA argument")
-        shared.sys.exit(1)
     if not args.modelB:
         print("Missing modelB argument")
     shared.benchmark.perfCompare(args.modelA, args.modelB)
