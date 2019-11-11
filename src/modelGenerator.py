@@ -80,6 +80,7 @@ def applyPCA(data):
     return eigenFaces, eigenValues, averageVector
 
 def reduceSpace(m, eigenValues, nComps):
+    nComps = int(nComps)
     bestEV = np.flip(np.argsort(eigenValues))[:nComps]
     
     if type(m) is dict: 

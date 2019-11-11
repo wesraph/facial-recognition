@@ -62,7 +62,8 @@ def benchmarkCompsNb(modelPath):
     negProbes = shared.loadAndTransform(shared.DATASET_DIR_NEGATIVE, m)
 
     # TODO: Improve range (maybe 2 benchmarks ?)
-    nPropsRange = np.arange(1, 150, 10)
+    nbComps = len(m["gallery"][0])
+    nPropsRange = np.rint(np.arange(1, nbComps+1, nbComps/10))
     accuracyAxis = []
     speedAxis = []
     for nProps in nPropsRange:
@@ -109,7 +110,7 @@ def benchmarkR(modelPath):
         print("Result for difference of ",percent*100, "%")
 
     shared.plt.plot([str(nb*100)+"%" for nb in percentageRange], accuracyAxis, label="Accuracy")
-    shared.plt.plot([str(nb*100)+"%" for nb in percentageRange], sensibilityAxis, label="Senibility")
+    shared.plt.plot([str(nb*100)+"%" for nb in percentageRange], sensibilityAxis, label="Sensibility")
     shared.plt.plot([str(nb*100)+"%" for nb in percentageRange], specificity, label="Specificity")
     shared.plt.plot()
     shared.plt.legend()
