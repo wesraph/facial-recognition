@@ -1,6 +1,7 @@
 from os import listdir
 from os.path import isfile, join
 from sklearn import preprocessing
+from PIL import Image
 import os
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
@@ -8,6 +9,7 @@ import numpy as np
 import random
 import search
 import argparse
+import math
 import sys
 import pickle
 import time
@@ -372,6 +374,7 @@ parser.add_argument("-r", "--r", type=int, help="the r value to set")
 parser.add_argument("-n", "--nComponents", type=int, help="the number of components to use")
 
 parser.add_argument("-s", "--showModel", action="store_true", help="plot the eigenValues of the model")
+parser.add_argument("-seg", "--showEigenFaces", action="store_true", help="show the eigenFaces (image)")
 parser.add_argument("-bcn", "--benchmarkCompsNb", action="store_true", help="benchmark the impact of the number of kept principal components of the model")
 parser.add_argument("-br", "--benchmarkR", action="store_true", help="benchmark the impact of R values")
 parser.add_argument("-cr", "--computeR", action="store_true", help="compute R for the model")
@@ -380,6 +383,7 @@ parser.add_argument("-e", "--evaluateModel", action="store_true", help="evalute 
 parser.add_argument("-m", "--model", default="model.pkl", help="path of the model to load")
 parser.add_argument("-ma", "--modelA", default="model.pkl", help="path of the model A to load")
 parser.add_argument("-mb", "--modelB", help="path of the model B to load")
+parser.add_argument("-gie", "--generateImageEigenFaces", action="store_true", help="generate the 100 images of eigen faces and store it to img/")
 
 args = parser.parse_args()
 if args.showModel:
@@ -399,6 +403,41 @@ elif args.benchmarkCompsNb:
 elif args.generateBaseModel:
     print("Generating model")
     trainModelAndSave(args.model)
+
+elif args.generateImageEigenFaces:
+    print("Showing eigenFaces")
+    print("Loading model")
+    m = loadModel(args.model)
+
+    print("Copying image")
+    m["eigenFaces"] = m["eigenFaces"].T
+    w, h = int(math.sqrt(len(m["eigenFaces"][0]))), int(math.sqrt(len(m["eigenFaces"][0])))
+    print(w, h)
+    print(len(m["eigenFaces"]))
+    print(len(m["eigenFaces"][0]))
+
+    gallery = np.zeros((h * 10, w * 10), dtype=np.uint8)
+
+    summed = np.zeros((h, w), dtype=np.uint8)
+    gallerySummed = np.zeros((h * 10, w * 10), dtype=np.uint8)
+
+    for i in range(1, 101):
+        print(i)
+        data = np.zeros((h, w), dtype=np.uint8)
+        r = len(m["eigenFaces"]) - i
+        vmax = np.amax(m["eigenFaces"][r])
+        im = np.split(m["eigenFaces"][r], w)
+        for ih in range(0, h):
+            for iw in range(0, w):
+                gallery[iw + w * int((i - 1) / 10)][ih + h * int((i - 1) % 10)] = im[iw][ih] / vmax * 255
+                gallerySummed[iw + w * int((i - 1) / 10)][ih + h * int((i - 1) % 10)] = summed[iw][ih] + im[iw][ih] / vmax * 255
+    img = Image.fromarray(gallery)
+    img.save("gallery.png")
+
+    img = Image.fromarray(gallerySummed)
+    img.save("gallerySummed.png")
+
+
 
 elif args.generateReducedModel:
     if not args.nComponents:
