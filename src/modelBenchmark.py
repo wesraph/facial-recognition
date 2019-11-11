@@ -95,7 +95,7 @@ def benchmarkR(modelPath):
         posProbes = shared.loadImageToArray(shared.DATASET_DIR_POSITIVE)
         negProbes = shared.loadImageToArray(shared.DATASET_DIR_NEGATIVE)
 
-    percentageRange = np.round(np.arange(-1, 1, 0.25), 2)    
+    percentageRange = np.round(np.arange(-1, 2, 0.25), 2)    
     accuracyAxis = []
     sensibilityAxis = []
     specificity = []
@@ -112,6 +112,7 @@ def benchmarkR(modelPath):
     shared.plt.plot([str(nb*100)+"%" for nb in percentageRange], sensibilityAxis, label="Senibility")
     shared.plt.plot([str(nb*100)+"%" for nb in percentageRange], specificity, label="Specificity")
     shared.plt.plot()
+    shared.plt.legend()
     shared.plt.show()
 
 def getPerfomances(modelPath):

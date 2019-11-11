@@ -44,10 +44,10 @@ elif args.generateReducedModel:
     if not args.nComponents:
         print("ERROR: You must specify n components to keep")
         shared.sys.exit(1)
-    if not args.modelB: 
-        print("ERROR: You must specify the output model (modelB)")
+    if not args.modelA: 
+        print("ERROR: You must specify the output model (modelA)")
         shared.sys.exit(1)
-    shared.generator.generateReducedModel(args.modelB, args.nComponents)
+    shared.generator.generateReducedModel(args.modelA, args.nComponents)
     
 #See & Modify a model
 elif args.showModelSettings:
