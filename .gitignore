@@ -1,0 +1,5 @@
+*.pkl
+*.png
+__pycache__
+data/
+ODATA_project_authentication_data.zip
