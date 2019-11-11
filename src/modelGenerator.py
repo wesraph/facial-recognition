@@ -1,6 +1,6 @@
 from sklearn import preprocessing
 import numpy as np
-import shared 
+import shared
 import random
 
 def findBestR(m, isRandom=True, limit=100):
@@ -39,7 +39,7 @@ def generateRawModel():
     m["gallery"] = shared.loadImageToArray(shared.DATASET_DIR_1)
     m["r"] = findBestR(m, limit=200)
     shared.saveModel(m, "rawModel")
-    
+
 def generatePCAModel():
     print("Creating pca model")
     print("Loading dataset (images to array)")
@@ -57,7 +57,7 @@ def generatePCAModel():
 
 
     shared.saveModel(model, "pcaModel.pkl")
-    
+
 def applyPCA(data):
     print("Compute average vector")
     data = np.array(data)
@@ -81,8 +81,8 @@ def applyPCA(data):
 
 def reduceSpace(m, eigenValues, nComps):
     bestEV = np.flip(np.argsort(eigenValues))[:nComps]
-    
-    if type(m) is dict: 
+
+    if type(m) is dict:
         redGallery = np.take(m["gallery"], bestEV, axis=1)
         redEigenFaces = np.take(m["eigenFaces"], bestEV, axis=1)
         redEigenValues = np.take(m["eigenValues"], bestEV)
@@ -96,7 +96,7 @@ def generateReducedModel(modelB, nComponents, r=True):
     shared.saveModel(mb, modelB)
 
 def reduceModel(nComponents, r=True):
-    
+
     ma = shared.loadModel("pcaModel")
 
     if(nComponents > len(ma["gallery"][0])):

@@ -36,19 +36,19 @@ args = parser.parse_args()
 #Generating model
 if args.generateRawModel:
     shared.generator.generateRawModel()
-    
+
 elif args.generatePCAModel:
     shared.generator.generatePCAModel()
-     
+
 elif args.generateReducedModel:
     if not args.nComponents:
         print("ERROR: You must specify n components to keep")
         shared.sys.exit(1)
-    if not args.modelA: 
+    if not args.modelA:
         print("ERROR: You must specify the output model (modelA)")
         shared.sys.exit(1)
     shared.generator.generateReducedModel(args.modelA, args.nComponents)
-    
+
 #See & Modify a model
 elif args.showModelSettings:
     shared.accessor.showModel(args.model)
@@ -68,7 +68,7 @@ elif args.benchmarkCompsNb:
 
 elif args.benchmarkRadius:
     shared.benchmark.benchmarkR(args.model)
-    
+
 #Compare two models
 elif args.compareModels:
     if not args.modelA:
@@ -77,7 +77,7 @@ elif args.compareModels:
     if not args.modelB:
         print("Missing modelB argument")
     shared.benchmark.perfCompare(args.modelA, args.modelB)
-    
+
 #Helper
 elif not len(shared.sys.argv) > 1 :
     parser.print_help()

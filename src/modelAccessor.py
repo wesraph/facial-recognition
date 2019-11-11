@@ -1,5 +1,5 @@
 import numpy as np
-import shared 
+import shared
 
 
 def showModel(path):
@@ -21,10 +21,10 @@ def showModel(path):
     print("Inertia:", inertia, "%")
 
     shared.plt.show()
-    
+
 def setModelSettings(modelPath, nComponents, r):
     m = shared.loadModel(modelPath)
-    
+
     if nComponents:
         m = shared.generator.reduceModel(nComponents, r=False)
     if r:
