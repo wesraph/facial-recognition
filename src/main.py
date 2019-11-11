@@ -27,7 +27,7 @@ parser.add_argument("-cm", "--compareModels", action="store_true", help="compare
 parser.add_argument("-m", "--model", default="pcaModel", help="path of the model to load")
 parser.add_argument("-ma", "--modelA", default="pcaModel", help="path of the model A to load")
 parser.add_argument("-mb", "--modelB", help="path of the model B to load")
-parser.add_argument("-r", "--r", type=int, help="the r value to set")
+parser.add_argument("-r", "--radius", type=int, help="the r value to set")
 parser.add_argument("-n", "--nComponents", type=int, help="the number of components to use")
 
 
