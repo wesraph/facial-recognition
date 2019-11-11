@@ -44,7 +44,6 @@ def generateEigenFacesPictures(path, number=10):
 
     gallery = np.zeros((h * number, w * number), dtype=np.uint8)
 
-    summed = np.zeros((h, w), dtype=np.uint8)
     gallerySummed = np.zeros((h * number, w * number), dtype=np.uint8)
 
     for i in range(1, (number * number ) + 1):
@@ -56,7 +55,7 @@ def generateEigenFacesPictures(path, number=10):
         for ih in range(0, h):
             for iw in range(0, w):
                 gallery[iw + w * int((i - 1) / number)][ih + h * int((i - 1) % number)] = im[iw][ih] / vmax * 255
-                gallerySummed[iw + w * int((i - 1) / number)][ih + h * int((i - 1) % number)] = summed[iw][ih] + im[iw][ih] / vmax * 255
+                gallerySummed[iw + w * int((i - 1) / number)][ih + h * int((i - 1) % number)] = gallerySummed[iw][ih] + im[iw][ih] / vmax * 255
 
     print("Gallery of eigenFaces saved to gallery.png")
     img = Image.fromarray(gallery)
